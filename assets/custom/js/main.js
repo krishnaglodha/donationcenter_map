@@ -515,7 +515,6 @@ map.on("click", function (evt) {
 
   if (feature) {
       console.log(feature);
-    //   $("#popupModal").modal('show');
       
  $("#popupModal").modal('show');
 
