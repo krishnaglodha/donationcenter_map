@@ -1,3 +1,7 @@
+var apigateway =
+  "https://htulmx2g97.execute-api.eu-central-1.amazonaws.com/final_prod";
+
+
 //get current location
   /**
        * Define a namespace for the application.
@@ -99,8 +103,8 @@ var map = new ol.Map({
     .extend([new app.RotateNorthControl(), new app.addNewData()]),
   view: new ol.View({
     //   projection:'EPSG:4326',
-    center: [0, 0],
-    zoom: 2,
+    center: [1496998.8366835883, 6892205.835048231],
+    zoom: 11,
   }),
 });
 
@@ -324,9 +328,9 @@ function readFile() {
   }
 }
 
-document
-  .getElementById("inputGroupFile01")
-  .addEventListener("change", readFile);
+// document
+//   .getElementById("inputGroupFile01")
+//   .addEventListener("change", readFile);
 
 function submitform() {
     document.getElementById("update_sent").innerHTML = ''
@@ -351,11 +355,16 @@ function submitform() {
                 .getCoordinates()[1],
         };
         var place_time = document.getElementById("place_time").value || "always";
-        var telehpone = document.getElementById("telehpone").value;
+        var telehpone = "+" + 
+          document.getElementById("country_code").value +
+          "-" +
+          document.getElementById("telehpone").value; ;
         var email = document.getElementById("email").value;
         var website = document.getElementById("website").value;
         var pay_attention = document.getElementById("pay_attention").value;
-        var do_with_donation = document.getElementById("do_with_donation").value;
+      var do_with_donation = document.getElementById("do_with_donation").value;
+      var place_address = document.getElementById("place_address").value;
+      ;
         var availablecategory = document.getElementsByClassName("category");
         var checkedCat = [];
         for (i = 0; i < availablecategory.length; i++){
@@ -376,7 +385,7 @@ function submitform() {
           pay_attention: pay_attention,
           do_with_donation: do_with_donation,
           type: JSON.stringify(checkedCat),
-          functional: "yes",
+          place_address: place_address,
         };
         if (img) {
           bodyParam["image"] = img;
@@ -384,7 +393,7 @@ function submitform() {
 
         //add new entry
         fetch(
-          "https://f4uhoylz66.execute-api.ap-south-1.amazonaws.com/prod/donationcenter",
+          apigateway ,
           {
             method: "POST",
 
@@ -422,7 +431,7 @@ function addAlert(text) {
 var allFetchedFeatures;
 function fetchdata() {
   fetch(
-    "https://f4uhoylz66.execute-api.ap-south-1.amazonaws.com/prod/donationcenter"
+    apigateway 
   )
     .then((res) => res.json())
       .then((data) => {
@@ -494,10 +503,11 @@ function camelize(str) {
 var master_points_source = new ol.source.Vector();
 var master_points = new ol.layer.Vector({
     source: master_points_source,
-    style:new ol.style.Style({
+  style: 
+    new ol.style.Style({
         image: new ol.style.Icon(
           /** @type {olx.style.IconOptions} */ ({
-            scale: 0.1,
+            scale: 0.2,
             src: "./assets/custom/images/marker.svg",
           })
         ),
@@ -520,7 +530,7 @@ map.on("click", function (evt) {
 
      
     // document.getElementById("popup").style.display = "block";
-    document.getElementById("popup-img").src = feature.getProperties().photoURL;
+    // document.getElementById("popup-img").src = feature.getProperties().photoURL;
     // document.getElementById("popup-type").innerHTML =
       var available_type = feature.getProperties().type;
       document.getElementById("available_type").innerHTML = '';
@@ -542,8 +552,7 @@ map.on("click", function (evt) {
              feature.getProperties().pay_attention;
          document.getElementById("feature_do_with_donation").innerHTML =
              feature.getProperties().do_with_donation;
-         document.getElementById("feature_functional").innerHTML =
-           feature.getProperties().functional;
+         
     //   
     // document.getElementById("popup-time").innerHTML =
     //   feature.getProperties().time;
