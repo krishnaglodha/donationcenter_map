@@ -543,7 +543,9 @@ map.on("click", function (evt) {
          document.getElementById("feature_time").innerHTML =
              feature.getProperties().time;
          document.getElementById("feature_telehpone").innerHTML =
-             feature.getProperties().telehpone;
+           feature.getProperties().telehpone;
+    document.getElementById("feature_address").innerHTML =
+      feature.getProperties().place_address;
          document.getElementById("feature_email").innerHTML =
              feature.getProperties().email;
          document.getElementById("feature_website").innerHTML =
