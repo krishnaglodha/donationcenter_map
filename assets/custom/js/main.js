@@ -150,8 +150,10 @@ function changeCursor(type) {
   });
 
 map.addControl(geocoder);
+var selected_address
   geocoder.on('addresschosen', (evt) => {
-      console.log(evt)
+    console.log(evt)
+
       map.getView().setCenter(evt.coordinate);
       map.getView().setZoom(14);
       
@@ -307,7 +309,9 @@ app.Drag.prototype.handleUpEvent = function () {
 //    keepOpen: true,
  });
  geocoder1.on("addresschosen", function (evt) {
-     console.info(evt);
+   console.info(evt);
+      selected_address = evt.address.original.formatted;
+
      if (map1.getLayers().a[1].getSource().getFeatures().length > 1) {
          map1.getLayers().a[1].getSource().getFeatures().shift();
      }
@@ -363,7 +367,7 @@ function submitform() {
         var website = document.getElementById("website").value;
         var pay_attention = document.getElementById("pay_attention").value;
       var do_with_donation = document.getElementById("do_with_donation").value;
-      var place_address = document.getElementById("place_address").value;
+      var place_address = selected_address;
       ;
         var availablecategory = document.getElementsByClassName("category");
         var checkedCat = [];
@@ -374,7 +378,7 @@ function submitform() {
             }
         }
      
-      if (place_name && telehpone && email.includes("@")) {
+      if (place_name && telehpone && email.includes("@") && website.includes('.')) {
         //check if img is added
         bodyParam = {
           name: place_name,
@@ -392,25 +396,22 @@ function submitform() {
         }
 
         //add new entry
-        fetch(
-          apigateway ,
-          {
-            method: "POST",
+        fetch(apigateway, {
+          method: "POST",
 
-            body: JSON.stringify({
-              data: bodyParam,
-              geometry: geom,
-            }),
-          }
-        )
+          body: JSON.stringify({
+            data: bodyParam,
+            geometry: geom,
+          }),
+        })
           .then((res) => res.json())
           .then((data) => {
-              console.log(data);
-               $("#newEntry").modal("hide");
+            console.log(data);
+            $("#newEntry").modal("hide");
             img = "";
-
+fetchdata();
             // fetchdata();
-            // clearform();
+            clearform();
           });
       } else {
         addAlert("Please Fill Form Completely");
@@ -564,3 +565,21 @@ map.on("click", function (evt) {
     // document.getElementById("popup").style.display = "none";
   }
 });
+
+function clicked() {
+  console.log('done')
+}
+document.getElementsByClassName("gcd-road").onclick = clicked;
+
+function clearform() {
+  document.getElementById("place_name").value = "";
+  document.getElementById("telehpone").value = "";
+           document.getElementById("email").value = "";
+place_address =''
+  document.getElementById("website").value = "";
+           document.getElementById("place_time").innerHTML = "";
+
+         document.getElementById("pay_attention").innerHTML = "";
+         document.getElementById("do_with_donation").innerHTML = "";
+
+}
