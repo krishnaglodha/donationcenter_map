@@ -30,8 +30,8 @@ var apigateway =
         var this_ = this;
      
 
-        button.addEventListener('click', trackLocation, false);
-        button.addEventListener('touchstart', trackLocation, false);
+        button.addEventListener('click', getLocation, false);
+        button.addEventListener('touchstart', getLocation, false);
 
         var element = document.createElement('div');
         element.className = 'rotate-north ol-unselectable ol-control';
@@ -109,26 +109,28 @@ var map = new ol.Map({
 });
 
 
-//add geolocation
-var geolocation = new ol.Geolocation({
-  projection: map.getView().getProjection(),
-});
 
-
-geolocation.on("change:position", function () {
-    changeCursor('progress')
-  var coordinates = geolocation.getPosition();
-    map.getView().setCenter(coordinates)
-    map.getView().setZoom(14)
-    geolocation.setTracking(false);
-     changeCursor("default");
-});
- 
-function trackLocation() {
-    geolocation.setTracking(true);
+function getLocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(showPosition);
+  } else {
+    // x.innerHTML = "Geolocation is not supported by this browser.";
+  }
 }
 
-trackLocation()
+function showPosition(position) {
+  var ccord = ol.proj.transform(
+    [position.coords.longitude, position.coords.latitude],
+    "EPSG:4326",
+    "EPSG:3857"
+  );
+    map
+      .getView()
+
+      .setCenter(ccord);
+  map.getView().setZoom(14);
+}
+
 
 
 function changeCursor(type) {
