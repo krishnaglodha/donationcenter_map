@@ -313,10 +313,19 @@ app.Drag.prototype.handleUpEvent = function () {
  geocoder1.on("addresschosen", function (evt) {
    console.info(evt);
       selected_address = evt.address.original.formatted;
-
-     if (map1.getLayers().a[1].getSource().getFeatures().length > 1) {
-         map1.getLayers().a[1].getSource().getFeatures().shift();
-     }
+   if (evt.address.details.postcode) {
+    document.getElementById("zip").value = evt.address.details.postcode;
+   } else {
+     document.getElementById("zip").value = ''
+   }
+   if (evt.address.details.city) {
+     document.getElementById("city").value = evt.address.details.city;
+   } else {
+     document.getElementById("city").value = ''
+   }
+    if (map1.getLayers().a[1].getSource().getFeatures().length > 1) {
+      map1.getLayers().a[1].getSource().getFeatures().shift();
+    }
  });
 map1.addControl(geocoder1);
  
@@ -369,7 +378,11 @@ function submitform() {
         var website = document.getElementById("website").value;
         var pay_attention = document.getElementById("pay_attention").value;
       var do_with_donation = document.getElementById("do_with_donation").value;
-      var place_address = selected_address;
+      var area = document.getElementById("place_field_activity").value;
+      var street = document.getElementById("street").value;
+      var need = document.getElementById("place_need").value;
+      var zip = document.getElementById("zip").value;
+      var city = document.getElementById("city").value;
       ;
         var availablecategory = document.getElementsByClassName("category");
         var checkedCat = [];
@@ -381,17 +394,20 @@ function submitform() {
         }
      
       if (place_name && telehpone && email.includes("@") && website.includes('.')) {
-        //check if img is added
         bodyParam = {
-          name: place_name,
-          time: place_time,
-          telehpone: telehpone,
-          email: email,
-          website: website,
-          pay_attention: pay_attention,
-          do_with_donation: do_with_donation,
-          type: JSON.stringify(checkedCat),
-          place_address: place_address,
+          Name:place_name,
+          Categories: JSON.stringify(checkedCat),
+          Street: street,
+          Zipcode: zip,
+          City: city,
+          Phone: telehpone,
+          Email: email,
+          Website: website,
+          Opening_Hours: place_time,
+          Need: need,
+          Note:pay_attention,
+          Area:area,
+          Activity:do_with_donation
         };
         if (img) {
           bodyParam["image"] = img;
@@ -446,6 +462,7 @@ function fetchdata() {
       master_points_source.addFeatures(
         new ol.format.GeoJSON().readFeatures(allPoints)
       );
+        
       allFetchedFeatures = master_points_source.getFeatures();
     });
 }
@@ -478,45 +495,82 @@ function dynamoDBtoGeojson(dynamodata) {
     type: "FeatureCollection",
     features: [],
   };
-
-  dynamodata.forEach((feature) => {
-    if (feature.geoJson) {
+  if (dynamodata.errorMessage) {
+    fetchdata()
+  } else {
+    dynamodata.forEach((feature) => {
+      if (feature.geoJson) {
         let geojson_feat = { type: "Feature" };
-        var new_ccord = ol.proj.transform(JSON.parse(feature.geoJson).coordinates, 'EPSG:4326', 'EPSG:3857')
-      geojson_feat["geometry"] = {
-        type: camelize(JSON.parse(feature.geoJson).type),
-        coordinates: new_ccord,
-      };
+        var new_ccord = ol.proj.transform(
+          JSON.parse(feature.geoJson).coordinates,
+          "EPSG:4326",
+          "EPSG:3857"
+        );
+        geojson_feat["geometry"] = {
+          type: camelize(JSON.parse(feature.geoJson).type),
+          coordinates: new_ccord,
+        };
         geojson_feat["properties"] = feature;
-       geojson_feat["properties"]['type']=   JSON.parse(feature.type);
+        geojson_feat["properties"]["type"] = JSON.parse(feature.type);
 
-      delete geojson_feat.properties.geoJson;
-      delete geojson_feat.properties.geohash;
-      delete geojson_feat.properties.hashKey;
-      geoJSON.features.push(geojson_feat);
-    }
-  });
+        delete geojson_feat.properties.geoJson;
+        delete geojson_feat.properties.geohash;
+        delete geojson_feat.properties.hashKey;
+        geoJSON.features.push(geojson_feat);
+      }
+    });
 
-  return geoJSON;
+    return geoJSON;
+  }
 }
 function camelize(str) {
   return str[0].toUpperCase() + str.substring(1).toLowerCase();
 }
 
 var master_points_source = new ol.source.Vector();
+var clusterSource = new ol.source.Cluster({
+  distance: 40,
+  source: master_points_source,
+});
+   var styleCache = {};
 var master_points = new ol.layer.Vector({
-    source: master_points_source,
-  style: 
-    new ol.style.Style({
-        image: new ol.style.Icon(
-          /** @type {olx.style.IconOptions} */ ({
-            scale: 0.2,
-            src: "./assets/custom/images/marker.svg",
-          })
-        ),
-      })
-    
-  
+  source: clusterSource,
+  style: function (feature) {
+    var size = feature.get("features").length;
+    var style = styleCache[size];
+    if (!style) {
+      if (size == 1) {
+        style = new ol.style.Style({
+          image: new ol.style.Icon(
+            /** @type {olx.style.IconOptions} */({
+              scale: 0.2,
+              src: "./assets/custom/images/marker.svg",
+            })
+          ),
+        });
+      } else {
+        style = new ol.style.Style({
+          image: new ol.style.Circle({
+            radius: 15,
+            stroke: new ol.style.Stroke({
+              color: "#fff",
+            }),
+            fill: new ol.style.Fill({
+              color: "#3399CC",
+            }),
+          }),
+          text: new ol.style.Text({
+            text: size.toString(),
+            fill: new ol.style.Fill({
+              color: "#fff",
+            }),
+          }),
+        });
+        styleCache[size] = style;
+      }
+    }
+    return style;
+  },
 });
 map.addLayer(master_points);
 
@@ -527,44 +581,60 @@ map.on("click", function (evt) {
   });
 
   if (feature) {
+    if (feature.getProperties().features.length == 1) {
+      var feat = feature.getProperties().features[0]
       console.log(feature);
       
- $("#popupModal").modal('show');
+      $("#popupModal").modal('show');
 
      
-    // document.getElementById("popup").style.display = "block";
-    // document.getElementById("popup-img").src = feature.getProperties().photoURL;
-    // document.getElementById("popup-type").innerHTML =
-      var available_type = feature.getProperties().type;
+      // document.getElementById("popup").style.display = "block";
+      // document.getElementById("popup-img").src = feature.getProperties().photoURL;
+      // document.getElementById("popup-type").innerHTML =
+      var available_type = feat.getProperties().type;
       document.getElementById("available_type").innerHTML = '';
       available_type.forEach(type => {
- document.getElementById("available_type").innerHTML +=
-   '<button type="button" class="btn btn-outline-success" disabled>' + type + "</button>";
+        document.getElementById("available_type").innerHTML +=
+          '<button type="button" class="btn btn-outline-success" disabled>' + type + "</button>";
       })
-    document.getElementById("feature_name").innerHTML =
-        feature.getProperties().name;
-         document.getElementById("feature_time").innerHTML =
-             feature.getProperties().time;
-         document.getElementById("feature_telehpone").innerHTML =
-           feature.getProperties().telehpone;
-    document.getElementById("feature_address").innerHTML =
-      feature.getProperties().place_address;
-         document.getElementById("feature_email").innerHTML =
-             feature.getProperties().email;
-         document.getElementById("feature_website").innerHTML =
-             feature.getProperties().website;
-         document.getElementById("feature_pay_attention").innerHTML =
-             feature.getProperties().pay_attention;
-         document.getElementById("feature_do_with_donation").innerHTML =
-             feature.getProperties().do_with_donation;
+      document.getElementById("feature_name").innerHTML =
+        feat.getProperties().name;
+      document.getElementById("feature_time").innerHTML =
+        feat.getProperties().time;
+      document.getElementById("feature_telehpone").innerHTML =
+        feat.getProperties().Phone;
+      document.getElementById("feature_street").innerHTML =
+        feat.getProperties().Street;
+      document.getElementById("feature_email").innerHTML =
+        feat.getProperties().email;
+      document.getElementById("feature_website").innerHTML =
+        feat.getProperties().website;
+      document.getElementById("feature_street").innerHTML =
+        feat.getProperties().Street;
+      document.getElementById("feature_Zip").innerHTML =
+        feat.getProperties().Zip;
+      document.getElementById("feature_City").innerHTML =
+        feat.getProperties().City;
+      document.getElementById("feature_pay_attention").innerHTML =
+        feat.getProperties().pay_attention;
+      document.getElementById("feature_do_with_donation").innerHTML =
+        feat.getProperties().do_with_donation;
+      document.getElementById("feature_time").innerHTML =
+        feat.getProperties().time;
+      document.getElementById("feature_need").innerHTML =
+        feat.getProperties().need;
+       
          
-    //   
-    // document.getElementById("popup-time").innerHTML =
-    //   feature.getProperties().time;
-    // document.getElementById("popup-functional").innerHTML =
-    //   feature.getProperties().functional;
+      //   
+      // document.getElementById("popup-time").innerHTML =
+      //   feature.getProperties().time;
+      // document.getElementById("popup-functional").innerHTML =
+      //   feature.getProperties().functional;
+    } else {
+      // document.getElementById("popup").style.display = "none";
+    }
   } else {
-    // document.getElementById("popup").style.display = "none";
+      $("#popupModal").modal("hide");
   }
 });
 
