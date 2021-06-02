@@ -3,17 +3,9 @@ var apigateway =
 
 
 //get current location
-  /**
-       * Define a namespace for the application.
-       */
+ 
       window.app = {};
       var app = window.app;
-
-
-      //
-      // Define rotate to north control.
-      //
-
 
       /**
        * @constructor
@@ -23,13 +15,8 @@ var apigateway =
       app.RotateNorthControl = function(opt_options) {
 
         var options = opt_options || {};
-
         var button = document.createElement('button');
         button.innerHTML = '<i class="fa fa-location-arrow" aria-hidden="true"></i>';
-
-        var this_ = this;
-     
-
         button.addEventListener('click', getLocation, false);
         button.addEventListener('touchstart', getLocation, false);
 
@@ -44,35 +31,12 @@ var apigateway =
 
       };
       ol.inherits(app.RotateNorthControl, ol.control.Control);
-
-//get current location
-  /**
-       * Define a namespace for the application.
-       */
-    //   window.app = {};
-    //   var app2 = window.app;
-
-
-      //
-      // Define rotate to north control.
-      //
-
-
-      /**
-       * @constructor
-       * @extends {ol.control.Control}
-       * @param {Object=} opt_options Control options.
-       */
       app.addNewData = function(opt_options) {
 
         var options = opt_options || {};
 
         var button = document.createElement('button');
         button.innerHTML = '<i class="fa fa-plus-circle" aria-hidden="true"></i>';
-
-        var this_ = this;
-     
-
         button.addEventListener('click', showForm, false);
         button.addEventListener('touchstart', showForm, false);
 
@@ -90,7 +54,7 @@ var apigateway =
 
 
 
-
+//initiate main map
 var map = new ol.Map({
   layers: [
     new ol.layer.Tile({
@@ -102,14 +66,13 @@ var map = new ol.Map({
     .defaults()
     .extend([new app.RotateNorthControl(), new app.addNewData()]),
   view: new ol.View({
-    //   projection:'EPSG:4326',
     center: [1496998.8366835883, 6892205.835048231],
     zoom: 11,
   }),
 });
 
 
-
+//get current location function
 function getLocation() {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(showPosition);
@@ -118,6 +81,7 @@ function getLocation() {
   }
 }
 
+//set center 
 function showPosition(position) {
   var ccord = ol.proj.transform(
     [position.coords.longitude, position.coords.latitude],
@@ -126,19 +90,17 @@ function showPosition(position) {
   );
     map
       .getView()
-
       .setCenter(ccord);
   map.getView().setZoom(14);
 }
 
 
-
+//change cursor 
 function changeCursor(type) {
     document.body.style.cursor = type;
 
 }
-
- // Instantiate with some options and add the Control
+//Geocoder on main map
   const geocoder = new Geocoder('nominatim', {
     provider: 'osm',
     targetType: 'text-input',
@@ -152,15 +114,16 @@ function changeCursor(type) {
   });
 
 map.addControl(geocoder);
+
+//set map location
 var selected_address
   geocoder.on('addresschosen', (evt) => {
-    console.log(evt)
-
       map.getView().setCenter(evt.coordinate);
       map.getView().setZoom(14);
       
   });
 
+//show new entry form
 function showForm() {
     $("#newEntry").modal("show");
     setTimeout(function () {      
@@ -169,12 +132,7 @@ function showForm() {
    
 }
 
-
- 
-  
-  /**
- * Define a namespace for the application.
- */
+/* Create Draggable marker on map - Start */
 var app = {};
 
 /**
@@ -280,8 +238,10 @@ app.Drag.prototype.handleUpEvent = function () {
   this.feature_ = null;
   return false;
 };
+/* Create Draggable marker on map - End */
 
 
+//small map init in entry form
   var map1 = new ol.Map({
     layers: [
       new ol.layer.Tile({
@@ -300,6 +260,7 @@ app.Drag.prototype.handleUpEvent = function () {
     }),
   });
 
+  //small map geocoder
  var geocoder1 = new Geocoder("nominatim", {
    provider: "osm",
    lang: "en",
@@ -310,6 +271,8 @@ app.Drag.prototype.handleUpEvent = function () {
    autoComplete: true,
 //    keepOpen: true,
  });
+
+ //on selecting address add zip and city to form
  geocoder1.on("addresschosen", function (evt) {
    console.info(evt);
       selected_address = evt.address.original.formatted;
@@ -329,7 +292,9 @@ app.Drag.prototype.handleUpEvent = function () {
  });
 map1.addControl(geocoder1);
  
+/*
 
+IF IMAGE NEEDS TO BE UPLOADED, UNCOMMENT THIS CODE
 var img = "";
 function readFile() {
   if (this.files && this.files[0]) {
@@ -342,14 +307,16 @@ function readFile() {
     FR.readAsDataURL(this.files[0]);
   }
 }
+document
+  .getElementById("inputGroupFile01")
+  .addEventListener("change", readFile);
 
-// document
-//   .getElementById("inputGroupFile01")
-//   .addEventListener("change", readFile);
+*/
 
+
+// Sumbit new entry 
 function submitform() {
     document.getElementById("update_sent").innerHTML = ''
-    //check all inputs
     if (
         map1.getLayers().a.length > 1 && map1.getLayers().a[1].getSource().getFeatures().length >
         0
@@ -439,14 +406,16 @@ fetchdata();
     }
 }
 
-
+// keep the geocoder bar open
 document.getElementsByClassName("gcd-gl-control")[0].className =
     "gcd-gl-control ol-control gcd-gl-expanded";
   
+// show warning text function
 function addAlert(text) {
     document.getElementById("update_sent").innerHTML = '<div class="alert alert-danger" role="alert">'+text+'</div>';
 }
 
+//fetching data from dynamo DB 
 var allFetchedFeatures;
 function fetchdata() {
   fetch(
@@ -454,21 +423,20 @@ function fetchdata() {
   )
     .then((res) => res.json())
       .then((data) => {
-         
-      //add all points to map
         var allPoints = dynamoDBtoGeojson(data);
-         console.log(allPoints);
       master_points_source.clear();
       master_points_source.addFeatures(
         new ol.format.GeoJSON().readFeatures(allPoints)
       );
-        
       allFetchedFeatures = master_points_source.getFeatures();
     });
 }
 
+// Fetch data initi
 fetchdata()
 
+/*
+UNCOMMENT THIS IF CATEGORY BASED FILTER IS NEEDED
 function showData() {
     var allcat = document.getElementsByClassName("categoryShow");
     var selectedCat = []
@@ -489,7 +457,9 @@ function showData() {
     }
 
 }
+*/
 
+//convert dynamoDB to GeoJSON to load on map
 function dynamoDBtoGeojson(dynamodata) {
   var geoJSON = {
     type: "FeatureCollection",
@@ -523,11 +493,15 @@ function dynamoDBtoGeojson(dynamodata) {
     return geoJSON;
   }
 }
+
+//function to make string Captial
 function camelize(str) {
   return str[0].toUpperCase() + str.substring(1).toLowerCase();
 }
 
+//create point source on map
 var master_points_source = new ol.source.Vector();
+//create cluster source
 var clusterSource = new ol.source.Cluster({
   distance: 40,
   source: master_points_source,
@@ -574,7 +548,7 @@ var master_points = new ol.layer.Vector({
 });
 map.addLayer(master_points);
 
-
+//marker click function
 map.on("click", function (evt) {
   var feature = map.forEachFeatureAtPixel(evt.pixel, function (feature, layer) {
    return feature;
@@ -583,15 +557,8 @@ map.on("click", function (evt) {
   if (feature) {
     if (feature.getProperties().features.length == 1) {
       var feat = feature.getProperties().features[0]
-      console.log(feature);
-      
       $("#popupModal").modal('show');
-
-     
-      // document.getElementById("popup").style.display = "block";
-      // document.getElementById("popup-img").src = feature.getProperties().photoURL;
-      // document.getElementById("popup-type").innerHTML =
-      var available_type = feat.getProperties().type;
+     var available_type = feat.getProperties().type;
       document.getElementById("available_type").innerHTML = '';
       available_type.forEach(type => {
         document.getElementById("available_type").innerHTML +=
@@ -623,26 +590,14 @@ map.on("click", function (evt) {
         feat.getProperties().time;
       document.getElementById("feature_need").innerHTML =
         feat.getProperties().need;
-       
-         
-      //   
-      // document.getElementById("popup-time").innerHTML =
-      //   feature.getProperties().time;
-      // document.getElementById("popup-functional").innerHTML =
-      //   feature.getProperties().functional;
-    } else {
-      // document.getElementById("popup").style.display = "none";
-    }
+         } else {
+ $("#popupModal").modal("hide");    }
   } else {
       $("#popupModal").modal("hide");
   }
 });
 
-function clicked() {
-  console.log('done')
-}
-document.getElementsByClassName("gcd-road").onclick = clicked;
-
+//clear the form function
 function clearform() {
   document.getElementById("place_name").value = "";
   document.getElementById("telehpone").value = "";
